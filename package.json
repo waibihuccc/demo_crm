@@ -1,0 +1,36 @@
+{
+  "name": "demo_crm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Internal B2B CRM for project-based sales-to-delivery workflows.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "postinstall": "prisma generate",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:validate": "prisma validate",
+    "test:foundation": "node --test tests/foundation/*.test.mjs",
+    "verify": "npm run typecheck && npm run db:validate && npm run test:foundation && npm run build"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.7.0",
+    "@prisma/client": "7.7.0",
+    "next": "16.2.3",
+    "pg": "8.16.3",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "25.6.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "prisma": "7.7.0",
+    "typescript": "6.0.2"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

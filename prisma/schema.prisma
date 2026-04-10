@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum LeadStatus {
+  new
+  qualified
+  converted
+  disqualified
+}
+
+enum OpportunityStatus {
+  new
+  discovery
+  solutioning
+  quoted
+  negotiation
+  won
+  lost
+}
+
+enum FollowUpType {
+  call
+  meeting
+  message
+  site_visit
+  proposal_discussion
+  other
+}
+
+enum QuotationStatus {
+  draft
+  sent
+  revised
+  accepted
+  rejected
+}
+
+enum ContractStatus {
+  draft
+  reviewing
+  signed
+  cancelled
+}
+
+enum ProjectStatus {
+  initiated
+  planning
+  in_delivery
+  completed
+  paused
+}
+
+model Company {
+  id                String        @id @default(uuid())
+  name              String
+  industry          String?
+  website           String?
+  phone             String?
+  email             String?
+  addressLine1      String?
+  addressLine2      String?
+  city              String?
+  state             String?
+  postalCode        String?
+  country           String?
+  notes             String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  contacts          Contact[]
+  opportunities     Opportunity[]
+  followUps         FollowUp[]
+  projects          Project[]
+  convertedFromLead Lead[]        @relation("LeadConvertedCompany")
+}
+
+model Contact {
+  id                String        @id @default(uuid())
+  companyId         String
+  name              String
+  jobTitle          String?
+  phone             String?
+  email             String?
+  roleLabel         String?
+  isPrimary         Boolean       @default(false)
+  notes             String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  company           Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  primaryFor        Opportunity[] @relation("PrimaryOpportunityContact")
+  followUps         FollowUp[]
+  convertedFromLead Lead[]        @relation("LeadConvertedContact")
+}
+
+model Lead {
+  id                     String       @id @default(uuid())
+  source                 String?
+  companyName            String
+  contactName            String?
+  contactPhone           String?
+  contactEmail           String?
+  summary                String
+  status                 LeadStatus   @default(new)
+  notes                  String?
+  convertedCompanyId     String?
+  convertedContactId     String?
+  convertedOpportunityId String?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  convertedCompany       Company?     @relation("LeadConvertedCompany", fields: [convertedCompanyId], references: [id], onDelete: SetNull)
+  convertedContact       Contact?     @relation("LeadConvertedContact", fields: [convertedContactId], references: [id], onDelete: SetNull)
+  convertedOpportunity   Opportunity? @relation("LeadConvertedOpportunity", fields: [convertedOpportunityId], references: [id], onDelete: SetNull)
+}
+
+model Opportunity {
+  id                String             @id @default(uuid())
+  companyId         String
+  primaryContactId  String?
+  name              String
+  projectType       String?
+  summary           String
+  status            OpportunityStatus  @default(new)
+  estimatedValue    Decimal?           @db.Decimal(18, 2)
+  expectedCloseDate DateTime?
+  probability       Int?
+  notes             String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  company           Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  primaryContact    Contact?           @relation("PrimaryOpportunityContact", fields: [primaryContactId], references: [id], onDelete: SetNull)
+  followUps         FollowUp[]
+  quotations        Quotation[]
+  contract          Contract?
+  projects          Project[]
+  convertedFromLead Lead[]             @relation("LeadConvertedOpportunity")
+}
+
+model FollowUp {
+  id           String       @id @default(uuid())
+  opportunityId String
+  companyId    String?
+  contactId    String?
+  type         FollowUpType
+  subject      String
+  notes        String
+  nextActionAt DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  opportunity  Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  company      Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contact      Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+}
+
+model Quotation {
+  id            String          @id @default(uuid())
+  opportunityId String
+  versionNumber Int
+  title         String
+  status        QuotationStatus @default(draft)
+  totalAmount   Decimal         @db.Decimal(18, 2)
+  currency      String          @db.VarChar(3)
+  notes         String?
+  sentAt        DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  opportunity   Opportunity     @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  contracts     Contract[]
+  projects      Project[]
+
+  @@unique([opportunityId, versionNumber])
+}
+
+model Contract {
+  id             String         @id @default(uuid())
+  opportunityId  String         @unique
+  quotationId    String?
+  contractNumber String?
+  title          String
+  status         ContractStatus @default(draft)
+  signedAt       DateTime?
+  startDate      DateTime?
+  endDate        DateTime?
+  totalAmount    Decimal?       @db.Decimal(18, 2)
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  opportunity    Opportunity    @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  quotation      Quotation?     @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  project        Project?
+}
+
+model Project {
+  id                   String        @id @default(uuid())
+  companyId            String
+  opportunityId        String
+  contractId           String?       @unique
+  quotationId          String?
+  name                 String
+  status               ProjectStatus @default(initiated)
+  startDate            DateTime?
+  targetCompletionDate DateTime?
+  handoffNotes         String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  company              Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  opportunity          Opportunity   @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  contract             Contract?     @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  quotation            Quotation?    @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+}

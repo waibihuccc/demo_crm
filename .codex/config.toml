@@ -1,0 +1,10 @@
+# Minimal project-scoped Codex configuration for safe local repository work.
+
+[project]
+name = "demo_crm"
+
+[workflow]
+plan_first = true
+safe_iteration = true
+final_summary = true
+
